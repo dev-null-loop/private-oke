@@ -23,16 +23,6 @@ locals {
     for idx, ad in data.oci_identity_availability_domains.ads.availability_domains : idx + 1 => ad.name
   }
 
-  security_lists = {
-    for k, v in var.security_lists : k => merge(v, {
-      egress_rules = [
-        for rule in v.egress_rules : merge(rule, {
-          destination = try(local.services[rule.destination].cidr_block, rule.destination)
-        })
-      ]
-    })
-  }
-
   route_tables = {
     for k, v in var.route_tables : k => merge(v, {
       route_rules = [

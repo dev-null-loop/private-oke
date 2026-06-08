@@ -39,52 +39,6 @@ variable "service_gateways" {
   default = {}
 }
 
-variable "security_lists" {
-  description = "security list parameters"
-  type = map(object({
-    vcn_name     = string
-    display_name = optional(string)
-    egress_rules = list(object({
-      description      = optional(string)
-      stateless        = optional(bool, false)
-      protocol         = string
-      destination      = string
-      destination_type = string
-      tcp_options = optional(object({
-        min = number
-        max = number
-      }))
-      udp_options = optional(object({
-        min = number
-        max = number
-      }))
-      icmp_options = optional(object({
-        type = number
-        code = number
-      }))
-    }))
-    ingress_rules = list(object({
-      stateless   = optional(bool, false)
-      protocol    = string
-      source      = string
-      source_type = string
-      tcp_options = optional(object({
-        min = number
-        max = number
-      }))
-      udp_options = optional(object({
-        min = number
-        max = number
-      }))
-      icmp_options = optional(object({
-        type = number
-        code = number
-      }))
-    }))
-  }))
-  default = {}
-}
-
 variable "route_tables" {
   type = map(object({
     vcn_name     = string

@@ -34,16 +34,6 @@ module "service_gateways" {
   vcn_id         = module.vcns[each.value.vcn_name].id
 }
 
-module "security_lists" {
-  source         = "git@github.com:dev-null-loop/oci_core//security_list"
-  for_each       = local.security_lists
-  display_name   = each.value.display_name
-  compartment_id = module.vcns[each.value.vcn_name].compartment_id
-  vcn_id         = module.vcns[each.value.vcn_name].id
-  egress_rules   = each.value.egress_rules
-  ingress_rules  = each.value.ingress_rules
-}
-
 module "route_tables" {
   source         = "git@github.com:dev-null-loop/oci_core//route_table"
   for_each       = local.route_tables
