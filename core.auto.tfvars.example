@@ -1,0 +1,408 @@
+vcns = {
+  vcn = {
+    cidr_blocks      = ["10.0.0.0/16"]
+    display_name     = "vcn"
+    dns_label        = "vcn"
+    compartment_name = "dev"
+    is_ipv6enabled   = true
+  }
+}
+
+internet_gateways = {
+  ig = {
+    vcn_name = "vcn"
+  }
+}
+
+nat_gateways = {
+  ng = {
+    display_name = "ng"
+    vcn_name     = "vcn"
+  }
+}
+
+service_gateways = {
+  sg = {
+    display_name = "sg"
+    vcn_name     = "vcn"
+  }
+}
+
+subnets = {
+  svcs_lb = {
+    display_name               = "svcs_lb"
+    cidr_block                 = "10.0.20.0/24"
+    dns_label                  = "svcslb"
+    prohibit_public_ip_on_vnic = false
+    security_list_names        = ["svcs_lb"]
+    route_table_name           = "public"
+    vcn_name                   = "vcn"
+    compartment_name           = "dev"
+  }
+  nodes = {
+    display_name               = "nodes"
+    cidr_block                 = "10.0.10.0/24"
+    dns_label                  = "nodes"
+    prohibit_internet_ingress  = true
+    prohibit_public_ip_on_vnic = true
+    security_list_names        = ["nodes"]
+    route_table_name           = "private"
+    vcn_name                   = "vcn"
+    compartment_name           = "dev"
+  }
+  api_endpoint = {
+    display_name               = "api_endpoint"
+    cidr_block                 = "10.0.0.0/28"
+    dns_label                  = "apiendpoint"
+    prohibit_internet_ingress  = true
+    prohibit_public_ip_on_vnic = true
+    security_list_names        = ["api_endpoint"]
+    route_table_name           = "private"
+    vcn_name                   = "vcn"
+    compartment_name           = "dev"
+  }
+}
+
+route_tables = {
+  public = {
+    display_name = "public"
+    vcn_name     = "vcn"
+    route_rules = [
+      {
+	destination         = "0.0.0.0/0"
+	destination_type    = "CIDR_BLOCK"
+	network_entity_name = "ig_ig"
+      }
+    ]
+  }
+  private = {
+    display_name = "private"
+    vcn_name     = "vcn"
+    route_rules = [
+      {
+	description         = "traffic to OCI services"
+	destination         = "services"
+	destination_type    = "SERVICE_CIDR_BLOCK"
+	network_entity_name = "sg_sg"
+      }
+      {
+	description         = "traffic to the internet"
+	destination         = "0.0.0.0/0"
+	destination_type    = "CIDR_BLOCK"
+	network_entity_name = "ng_ng"
+      }
+    ]
+  }
+}
+
+security_lists = {
+  svcs_lb = {
+    vcn_name     = "vcn"
+    display_name = "svcs_lb"
+    egress_rules = [
+      {
+	description      = "SSH"
+	destination      = "0.0.0.0/0"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+      }
+    ]
+    ingress_rules = [
+      {
+	protocol    = "6"
+	source      = "0.0.0.0/0"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 443
+	  min = 443
+	}
+      }
+      {
+	protocol    = "6"
+	source      = "0.0.0.0/0"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 80
+	  min = 80
+	}
+      }
+      {
+	description = "SSH"
+	protocol    = "6"
+	source      = "0.0.0.0/0"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 22
+	  min = 22
+	}
+      }
+      {
+	description = "worker-nodes-to-native-ingress-controller"
+	protocol    = "all"
+	source      = "10.0.10.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+      }
+    ]
+  }
+  api_endpoint = {
+    vcn_name     = "vcn"
+    display_name = "api_endpoint"
+    egress_rules = [
+      {
+	description      = "Allow Kubernetes Control Plane to communicate with OKE"
+	destination      = "services"
+	destination_type = "SERVICE_CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+	tcp_options = {
+	  max = 443
+	  min = 443
+	}
+      }
+      {
+	description      = "All traffic to worker nodes"
+	destination      = "10.0.10.0/24"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+      }
+      {
+	description      = "Path discovery"
+	destination      = "10.0.10.0/24"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "1"
+	stateless        = false
+	icmp_options = {
+	  code = 4
+	  type = 3
+	}
+      }
+    ]
+    ingress_rules = [
+      {
+	description = "External access to Kubernetes API endpoint"
+	protocol    = "6"
+	source      = "0.0.0.0/0"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 6443
+	  min = 6443
+	}
+      }
+      {
+	description = "Kubernetes worker to Kubernetes API endpoint communication"
+	protocol    = "6"
+	source      = "10.0.10.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 6443
+	  min = 6443
+	}
+      }
+      {
+	description = "Kubernetes worker to control plane communication"
+	protocol    = "6"
+	source      = "10.0.10.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 12250
+	  min = 12250
+	}
+      }
+      {
+	description = "Path discovery"
+	protocol    = "1"
+	source      = "10.0.10.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	icmp_options = {
+	  code = 4
+	  type = 3
+	}
+      }
+    ]
+  }
+  nodes = {
+    vcn_name     = "vcn"
+    display_name = "nodes"
+    egress_rules = [
+      {
+	description      = "Access to Kubernetes API Endpoint"
+	destination      = "10.0.0.0/28"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+	tcp_options = {
+	  max = 6443
+	  min = 6443
+	}
+      }
+      {
+	description      = "Allow nodes to communicate with OKE to ensure correct start-up and continued functioning"
+	destination      = "services"
+	destination_type = "SERVICE_CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+	tcp_options = {
+	  max = 443
+	  min = 443
+	}
+      }
+      {
+	description      = "Allow pods on one worker node to communicate with pods on other worker nodes"
+	destination      = "10.0.10.0/24"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "all"
+	stateless        = false
+      }
+      {
+	description      = "ICMP Access from Kubernetes Control Plane"
+	destination      = "0.0.0.0/0"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "1"
+	stateless        = false
+	icmp_options = {
+	  code = 4
+	  type = 3
+	}
+      }
+      {
+	description      = "Path discovery"
+	destination      = "10.0.0.0/28"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "1"
+	stateless        = false
+	icmp_options = {
+	  code = 4
+	  type = 3
+	}
+      }
+      {
+	description      = "Kubernetes worker to control plane communication"
+	destination      = "10.0.0.0/28"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "6"
+	stateless        = false
+	tcp_options = {
+	  max = 12250
+	  min = 12250
+	}
+      }
+      {
+	description      = "Worker Nodes access to Internet"
+	destination      = "0.0.0.0/0"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "all"
+	stateless        = false
+      }
+      {
+	description      = "native-ingress-controller"
+	destination      = "10.0.20.0/24"
+	destination_type = "CIDR_BLOCK"
+	protocol         = "all"
+	stateless        = false
+      }
+    ]
+    ingress_rules = [
+      {
+	description = "Allow pods on one worker node to communicate with pods on other worker nodes"
+	protocol    = "all"
+	source      = "10.0.10.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+      }
+      {
+	description = "Path discovery"
+	protocol    = "1"
+	source      = "10.0.0.0/28"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	icmp_options = {
+	  code = 4
+	  type = 3
+	}
+      }
+      {
+	description = "Inbound SSH traffic to worker nodes"
+	protocol    = "6"
+	source      = "0.0.0.0/0"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 22
+	  min = 22
+	}
+      }
+      {
+	description = "Kubernetes API endpoint to control plane communication"
+	protocol    = "6"
+	source      = "10.0.0.0/28"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 10250
+	  min = 10250
+	}
+      }
+      {
+	description = "Kubernetes API endpoint to worker nodes communication"
+	protocol    = "6"
+	source      = "10.0.0.0/28"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+      }
+      {
+	description = "Inbound HTTPS traffic from native-ingress-controller to worker nodes"
+	protocol    = "6"
+	source      = "10.0.20.0/24"
+	source_type = "CIDR_BLOCK"
+	stateless   = false
+	tcp_options = {
+	  max = 10256
+	  min = 10256
+	}
+      }
+    ]
+  }
+}
+
+source_ids = {
+  "Oracle-Linux-10.1-2026.04.30-3" = "ocid1.image.oc1.."
+}
+
+instances = {
+  bastion = {
+    compartment_name    = "dev"
+    availability_domain = 1
+    create_vnic_details = {
+      assign_public_ip = true
+      subnet_name      = "svcs_lb"
+    }
+    display_name = "bastion"
+    shape        = "VM.Standard.E4.Flex"
+    shape_config = {
+      memory_in_gbs = 16
+      ocpus         = 2
+    }
+    source_details = {
+      source_name = "Oracle-Linux-10.1-2026.04.30-3"
+    }
+    ssh_public_keys = [
+      "ssh-rsa ..."
+    ]
+    cloud_init = [
+      {
+	content_type = "text/cloud-config"
+	filename     = "userdata/bastion-copyfail-ksplice.yaml"
+      }
+    ]
+  }
+}
