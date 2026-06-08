@@ -64,7 +64,32 @@ module "subnets" {
   prohibit_internet_ingress  = each.value.prohibit_internet_ingress
   prohibit_public_ip_on_vnic = each.value.prohibit_public_ip_on_vnic
   route_table_id             = each.value.route_table_name == null ? null : module.route_tables[each.value.route_table_name].id
-  security_list_ids          = length(each.value.security_list_names) == 0 ? null : [for name in each.value.security_list_names : module.security_lists[name].id]
+  security_list_ids          = [module.vcns[each.value.vcn_name].managed_default_security_list_id]
+}
+
+module "nsgs" {
+  source         = "git@github.com:dev-null-loop/oci_core//network_security_group"
+  for_each       = var.nsgs
+  compartment_id = var.compartment_ids[each.value.compartment_name]
+  display_name   = each.value.display_name
+  vcn_id         = module.vcns[each.value.vcn_name].id
+}
+
+module "nsg_rules" {
+  source                    = "git@github.com:dev-null-loop/oci_core//network_security_group_security_rule"
+  for_each                  = local.nsg_rules
+  description               = each.value.description
+  destination               = each.value.destination
+  destination_type          = each.value.destination_type
+  direction                 = each.value.direction
+  icmp_options              = each.value.icmp_options
+  network_security_group_id = module.nsgs[each.value.network_security_group_name].id
+  protocol                  = each.value.protocol
+  rule_source               = each.value.source
+  rule_source_type          = each.value.source_type
+  stateless                 = each.value.stateless
+  tcp_options               = each.value.tcp_options
+  udp_options               = each.value.udp_options
 }
 
 module "instances" {

@@ -46,11 +46,29 @@ locals {
     })
   }
 
+  nsg_rules = {
+    for k, v in var.nsg_rules : k => {
+      network_security_group_name = v.network_security_group_name
+      description                 = v.description
+      direction                   = v.direction
+      protocol                    = v.protocol
+      stateless                   = v.stateless
+      source                      = v.source_type == "NETWORK_SECURITY_GROUP" ? module.nsgs[v.source].id : v.source
+      source_type                 = v.source_type
+      destination                 = v.destination_type == "NETWORK_SECURITY_GROUP" ? module.nsgs[v.destination].id : v.destination
+      destination_type            = v.destination_type
+      tcp_options                 = v.tcp_options
+      udp_options                 = v.udp_options
+      icmp_options                = v.icmp_options
+    }
+  }
+
   instances = {
     for k, v in var.instances : k => merge(v, {
       availability_domain = local.availability_domains[v.availability_domain]
       create_vnic_details = merge(v.create_vnic_details, {
         subnet_id = try(module.subnets[v.create_vnic_details.subnet_name].id, v.create_vnic_details.subnet_id)
+        nsg_ids   = [for nsg_name in v.create_vnic_details.nsg_names : module.nsgs[nsg_name].id]
       })
       source_details = merge(v.source_details, {
         source_id = var.source_ids[v.source_details.source_name]

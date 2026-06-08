@@ -107,9 +107,56 @@ variable "subnets" {
     dns_label                  = string
     prohibit_internet_ingress  = optional(bool)
     prohibit_public_ip_on_vnic = bool
-    security_list_names        = optional(list(string), [])
     route_table_name           = optional(string)
     vcn_name                   = string
+  }))
+  default = {}
+}
+
+variable "nsgs" {
+  type = map(object({
+    compartment_name = string
+    vcn_name         = string
+    display_name     = optional(string)
+  }))
+  default = {}
+}
+
+variable "nsg_rules" {
+  type = map(object({
+    network_security_group_name = string
+    description                 = optional(string)
+    direction                   = string
+    protocol                    = string
+    stateless                   = optional(bool)
+    source                      = optional(string)
+    source_type                 = optional(string)
+    destination                 = optional(string)
+    destination_type            = optional(string)
+    tcp_options = optional(object({
+      destination_port_range = optional(object({
+        max = number
+        min = number
+      }))
+      source_port_range = optional(object({
+        max = number
+        min = number
+      }))
+    }))
+    udp_options = optional(object({
+      destination_port_range = optional(object({
+        max = number
+        min = number
+      }))
+      source_port_range = optional(object({
+        max = number
+        min = number
+      }))
+    }))
+    icmp_options = optional(object({
+      code = optional(number)
+      type = number
+    }))
   }))
   default = {}
 }
@@ -121,6 +168,7 @@ variable "instances" {
     compartment_name    = string
     create_vnic_details = object({
       assign_public_ip = optional(bool, false)
+      nsg_names        = optional(list(string), [])
       subnet_name      = string
       subnet_id        = optional(string)
     })

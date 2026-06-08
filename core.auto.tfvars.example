@@ -34,7 +34,6 @@ subnets = {
     cidr_block                 = "10.0.20.0/24"
     dns_label                  = "svcslb"
     prohibit_public_ip_on_vnic = false
-    security_list_names        = ["svcs_lb"]
     route_table_name           = "public"
     vcn_name                   = "vcn"
     compartment_name           = "dev"
@@ -45,7 +44,6 @@ subnets = {
     dns_label                  = "nodes"
     prohibit_internet_ingress  = true
     prohibit_public_ip_on_vnic = true
-    security_list_names        = ["nodes"]
     route_table_name           = "private"
     vcn_name                   = "vcn"
     compartment_name           = "dev"
@@ -56,7 +54,6 @@ subnets = {
     dns_label                  = "apiendpoint"
     prohibit_internet_ingress  = true
     prohibit_public_ip_on_vnic = true
-    security_list_names        = ["api_endpoint"]
     route_table_name           = "private"
     vcn_name                   = "vcn"
     compartment_name           = "dev"
@@ -374,6 +371,146 @@ security_lists = {
   }
 }
 
+nsgs = {
+  bastion = {
+    compartment_name = "dev"
+    vcn_name         = "vcn"
+    display_name     = "bastion"
+  }
+  nodes = {
+    compartment_name = "dev"
+    vcn_name         = "vcn"
+    display_name     = "nodes"
+  }
+  api_endpoint = {
+    compartment_name = "dev"
+    vcn_name         = "vcn"
+    display_name     = "api-endpoint"
+  }
+  svcs_lb = {
+    compartment_name = "dev"
+    vcn_name         = "vcn"
+    display_name     = "svcs-lb"
+  }
+}
+
+nsg_rules = {
+  bastion_ssh_ingress = {
+    network_security_group_name = "bastion"
+    description                 = "SSH ingress to bastion"
+    direction                   = "INGRESS"
+    protocol                    = "6"
+    source                      = "0.0.0.0/0"
+    source_type                 = "CIDR_BLOCK"
+    tcp_options = {
+      destination_port_range = {
+	min = 22
+	max = 22
+      }
+    }
+  }
+  bastion_to_nodes_ssh = {
+    network_security_group_name = "bastion"
+    description                 = "Bastion egress to nodes SSH"
+    direction                   = "EGRESS"
+    protocol                    = "6"
+    destination                 = "nodes"
+    destination_type            = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 22
+	max = 22
+      }
+    }
+  }
+  nodes_from_bastion_ssh = {
+    network_security_group_name = "nodes"
+    description                 = "Bastion ingress to nodes SSH"
+    direction                   = "INGRESS"
+    protocol                    = "6"
+    source                      = "bastion"
+    source_type                 = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 22
+	max = 22
+      }
+    }
+  }
+  api_from_nodes_6443 = {
+    network_security_group_name = "api_endpoint"
+    description                 = "Nodes to API endpoint 6443"
+    direction                   = "INGRESS"
+    protocol                    = "6"
+    source                      = "nodes"
+    source_type                 = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 6443
+	max = 6443
+      }
+    }
+  }
+  api_from_nodes_12250 = {
+    network_security_group_name = "api_endpoint"
+    description                 = "Nodes to API endpoint 12250"
+    direction                   = "INGRESS"
+    protocol                    = "6"
+    source                      = "nodes"
+    source_type                 = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 12250
+	max = 12250
+      }
+    }
+  }
+  nodes_to_api_6443 = {
+    network_security_group_name = "nodes"
+    description                 = "Nodes egress to API endpoint 6443"
+    direction                   = "EGRESS"
+    protocol                    = "6"
+    destination                 = "api_endpoint"
+    destination_type            = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 6443
+	max = 6443
+      }
+    }
+  }
+  nodes_to_api_12250 = {
+    network_security_group_name = "nodes"
+    description                 = "Nodes egress to API endpoint 12250"
+    direction                   = "EGRESS"
+    protocol                    = "6"
+    destination                 = "api_endpoint"
+    destination_type            = "NETWORK_SECURITY_GROUP"
+    tcp_options = {
+      destination_port_range = {
+	min = 12250
+	max = 12250
+      }
+    }
+  }
+  nodes_to_svcs_lb_all = {
+    network_security_group_name = "nodes"
+    description                 = "Nodes to service LB subnet workloads"
+    direction                   = "EGRESS"
+    protocol                    = "all"
+    destination                 = "svcs_lb"
+    destination_type            = "NETWORK_SECURITY_GROUP"
+  }
+  svcs_lb_from_nodes_all = {
+    network_security_group_name = "svcs_lb"
+    description                 = "Service LB ingress from nodes"
+    direction                   = "INGRESS"
+    protocol                    = "all"
+    source                      = "nodes"
+    source_type                 = "NETWORK_SECURITY_GROUP"
+  }
+}
+
 source_ids = {
   "Oracle-Linux-10.1-2026.04.30-3" = "ocid1.image.oc1.."
 }
@@ -384,6 +521,7 @@ instances = {
     availability_domain = 1
     create_vnic_details = {
       assign_public_ip = true
+      nsg_names        = ["bastion"]
       subnet_name      = "svcs_lb"
     }
     display_name = "bastion"
